@@ -12,7 +12,6 @@
 #http://codingmess.blogspot.com/2008/07/how-to-make-simple-wav-file-with-python.html
 #http://soledadpenades.com/2009/10/29/fastest-way-to-generate-wav-files-in-python-using-the-wave-module/
 #http://kenschutte.com/python-audio-demo
-#http://medussa.us/
 
 
 #import?
@@ -29,6 +28,44 @@
 #Tom 3: 87Hz
 #Tom 2: 128Hz
 #Top 1: 150Hz
+
+
+import numpy as N
+import wave
+
+class SoundFile:
+   def  __init__(self, signal):
+       self.file = wave.open('test.wav', 'wb')
+       self.signal = signal
+       self.sr = 44100
+
+   def write(self):
+       self.file.setparams((1, 2, self.sr, 44100*4, 'NONE', 'noncompressed'))
+       self.file.writeframes(self.signal)
+       self.file.close()
+
+# let's prepare signal
+duration = 4 # seconds
+samplerate = 44100 # Hz
+samples = duration*samplerate
+frequency = 440 # Hz
+period = samplerate / float(frequency) # in sample points
+omega = N.pi * 2 / period
+volume = 16384
+
+xaxis = N.arange(samples, dtype=N.float)
+ydata = volume * N.sin(xaxis * omega)
+
+signal = N.resize(ydata, (samples,))
+
+ssignal = ''.join((wave.struct.pack('h', item) for item in signal)) # transform to binary
+
+f = SoundFile(ssignal)
+f.write()
+print 'file written'
+
+
+
 
 class PyProgMusic:
     notes = {
@@ -240,5 +277,5 @@ class Instrument:
     pass
 
 
-if __name__ == "__main__":
-    music = PyProgMusic()
+#if __name__ == "__main__":
+    #music = PyProgMusic()
