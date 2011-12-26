@@ -33,41 +33,13 @@
 import numpy as N
 import wave
 
-class SoundFile:
-   def  __init__(self, signal):
-       self.file = wave.open('test.wav', 'wb')
-       self.signal = signal
-       self.sr = 44100
-
-   def write(self):
-       self.file.setparams((1, 2, self.sr, 44100*4, 'NONE', 'noncompressed'))
-       self.file.writeframes(self.signal)
-       self.file.close()
-
-# let's prepare signal
-duration = 4 # seconds
-samplerate = 44100 # Hz
-samples = duration*samplerate
-frequency = 440 # Hz
-period = samplerate / float(frequency) # in sample points
-omega = N.pi * 2 / period
-volume = 16384
-
-xaxis = N.arange(samples, dtype=N.float)
-ydata = volume * N.sin(xaxis * omega)
-
-signal = N.resize(ydata, (samples,))
-
-ssignal = ''.join((wave.struct.pack('h', item) for item in signal)) # transform to binary
-
-f = SoundFile(ssignal)
-f.write()
-print 'file written'
 
 
 
 
-class PyProgMusic:
+
+
+class PyProgMusic(object):
     notes = {
         "C 0": 16.352,
         "C# 0": 17.324,
@@ -268,14 +240,142 @@ class PyProgMusic:
         "B 10": 31608.5,
         }
 
-    def __init__(self, sample_rate):
+    def __init__(self, sample_rate=44100):
         self.sample_rate = sample_rate #16000, 22050, 32000, 44056, 44100(CD quality)
+        self.qpm = 120 #quarter notes per minute
+        self.channel_data = []
+
+    def add_note(self, instrument, note, time):
+        #time:
+        #4 = whole note
+        #2 = half note
+        #1 = quarter note
+        #.5 = 1/16 note
+        #.25 = 1/32 note
+
+        duration = (60.0/self.qpm) * time #seconds
+        samples = duration * self.sample_rate
+        frequency = self.notes[note] # Hz
+        period = self.sample_rate / float(frequency) # in sample points
+        omega = N.pi * 2 / period
+        volume = 16384 #half volume
+       
+        xaxis = N.arange(samples, dtype=N.float) #creates an array 'samples' big
+        ydata = volume * N.sin(xaxis * omega)
+
+        signal = N.resize(ydata, (samples,))
+       
+        self.channel_data.append(signal)
+
+    def write_out(self):
+        signal = N.concatenate(self.channel_data, axis=0)
+        ssignal = ''.join((wave.struct.pack('h', item) for item in signal)) # transform to binary
+       
+        file = wave.open('test.wav', 'wb')
+        file.setparams((1, 2, self.sample_rate, 44100*4, 'NONE', 'noncompressed'))       
+        file.writeframes(ssignal)
+        file.close()
+
+    def play(self):
+        self.write_out()
+        print "Playing music"
+
+        import pyglet
+        music = pyglet.resource.media("test.wav")
+        player = pyglet.media.Player()
+        player.queue(music)
+        player.play()
+        while player.playing:
+            pyglet.clock.tick(30)
 
 
+    def view(self):
+        signal = N.concatenate(self.channel_data, axis=0)
 
-class Instrument:
+        import matplotlib.pyplot as plt
+        plt.plot(signal)
+        plt.ylabel('some numbers')
+        plt.show()
+
+class Instrument(object):
     pass
 
+class Tone(Instrument):
+    pass
 
-#if __name__ == "__main__":
-    #music = PyProgMusic()
+if __name__ == "__main__":
+    music = PyProgMusic()
+
+    thetone = Tone()
+
+    #http://www.music-scores.com/midi.php?sheetmusic=Xmas_Jingle_Bells_very_easy_piano
+    
+    music.add_note(thetone, "E 4", 1)
+    music.add_note(thetone, "E 4", 1)
+    music.add_note(thetone, "E 4", 2)
+
+    music.add_note(thetone, "E 4", 1)
+    music.add_note(thetone, "E 4", 1)
+    music.add_note(thetone, "E 4", 2)
+    
+    music.add_note(thetone, "E 4", 1)
+    music.add_note(thetone, "G 4", 1)
+    music.add_note(thetone, "C 4", 1.5)
+    music.add_note(thetone, "D 4", .5)
+
+    music.add_note(thetone, "E 4", 4)
+
+
+    music.add_note(thetone, "F 4", 1)
+    music.add_note(thetone, "F 4", 1)
+    music.add_note(thetone, "F 4", 1.5)
+    music.add_note(thetone, "F 4", .5)
+
+    music.add_note(thetone, "F 4", 1)
+    music.add_note(thetone, "E 4", 1)
+    music.add_note(thetone, "E 4", 1)
+    music.add_note(thetone, "E 4", .5)
+    music.add_note(thetone, "E 4", .5)
+
+    music.add_note(thetone, "E 4", 1)
+    music.add_note(thetone, "D 4", 1)
+    music.add_note(thetone, "D 4", 1)
+    music.add_note(thetone, "E 4", 1)
+
+    music.add_note(thetone, "D 4", 2)
+    music.add_note(thetone, "G 4", 2)
+
+    music.add_note(thetone, "E 4", 1)
+    music.add_note(thetone, "E 4", 1)
+    music.add_note(thetone, "E 4", 2)
+
+    music.add_note(thetone, "E 4", 1)
+    music.add_note(thetone, "E 4", 1)
+    music.add_note(thetone, "E 4", 2)
+
+    music.add_note(thetone, "E 4", 1)
+    music.add_note(thetone, "G 4", 1)
+    music.add_note(thetone, "C 4", 1.5)
+    music.add_note(thetone, "D 4", .5)
+
+    music.add_note(thetone, "E 4", 4)
+
+    music.add_note(thetone, "F 4", 1)
+    music.add_note(thetone, "F 4", 1)
+    music.add_note(thetone, "F 4", 1)
+    music.add_note(thetone, "F 4", 1)
+
+    music.add_note(thetone, "F 4", 1)
+    music.add_note(thetone, "E 4", 1)
+    music.add_note(thetone, "E 4", 1)
+    music.add_note(thetone, "E 4", .5)
+    music.add_note(thetone, "E 4", .5)
+
+    music.add_note(thetone, "G 4", 1)
+    music.add_note(thetone, "G 4", 1)
+    music.add_note(thetone, "F 4", 1)
+    music.add_note(thetone, "D 4", 1)
+
+    music.add_note(thetone, "C 4", 4)
+
+    music.play()
