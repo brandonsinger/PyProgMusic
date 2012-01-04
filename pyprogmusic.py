@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 #http://python.dzone.com/articles/sound-synthesis-numpy
 #http://www.sengpielaudio.com/calculator-notenames.htm
 #http://en.wikipedia.org/wiki/Scientific_pitch_notation
@@ -253,17 +255,12 @@ class PyProgMusic(object):
         #.5 = 1/16 note
         #.25 = 1/32 note
 
+        frequency = self.notes[note] # Hz
         duration = (60.0/self.qpm) * time #seconds
         samples = duration * self.sample_rate
-        frequency = self.notes[note] # Hz
         period = self.sample_rate / float(frequency) # in sample points
-        omega = N.pi * 2 / period
         volume = 16384 #half volume
-       
-        xaxis = N.arange(samples, dtype=N.float) #creates an array 'samples' big
-        ydata = volume * N.sin(xaxis * omega)
-
-        signal = N.resize(ydata, (samples,))
+        signal = instrument.create_note(frequency, duration, samples, period, volume);
        
         self.channel_data.append(signal)
 
@@ -298,84 +295,202 @@ class PyProgMusic(object):
         plt.show()
 
 class Instrument(object):
-    pass
+    def create_note(self, frequency, duration, samples, period, volume):
+        #http://www.ams.org/samplings/feature-column/fcarc-synthesizer
+        #=A * sin(2π * f * t + p)
+        #=A * sin(2π / T * t + p)
+        #=A sin(2π * fc * t + I * sin(2π * fm * t))
+        # A=amplitude
+        # f=1/T
+        # T=time for one period
+        # t=?time
+        # p=phase shift
+        # loadness controled by A
+        # timbre controled by I
+        #fc=carrier frequency
+        #fm=modulating frequency
+        A = volume
+        I = 5
+        T = period
+        fc = 1/T
+        fm = 1/(T/2)
+        t = N.arange(samples, dtype=N.float) #creates an array 'samples' big (1,2,3,4....samples)
+
+        A *= self.A(samples)
+        I = self.I(samples)
+        
+        signal = A * N.sin(2*N.pi * fc * t + I * N.sin(2*N.pi * fm * t))
+
+            
+        #//signal = N.resize(ydata, (samples,))
+            
+        
+        return signal
+
+    def _create_envelope(self, samples, actions):
+        #types: line, exponential, logorithmic
+        # ?: [type:?, length:(in amount or percent), start_value, stop_value]
+
+        e = N.empty(samples, N.float)        
+        position = 0
+
+        for action in actions:
+            if action['length'].endswith("%"):
+                l = round(int(action['length'][:-1]) / 100.0 * samples)
+            if position+l > samples:
+                l = samples - position
+
+            #print "Length: %s" % (l,)
+            if action['type'] == 'line':
+                e[position:position+l] = N.linspace(action['start_value'], action['stop_value'], l)
+                #print "line %s:%s start:%s stop:%s" % (position, position+l, action['start_value'], action['stop_value'])
+
+
+            position += l
+                
+        return e
+
 
 class Tone(Instrument):
-    pass
+    def __init__(self):
+        pass    
+    
+    def A(self, samples):
+        #Controls loudnes
+        return 1
 
+    def fm(self, fc):
+        #modulating frequency
+        return fc
+    
+    def I(self, samples):
+        #controls timbre
+        return 0
+
+class Bla(Instrument):
+    def __init__(self):
+        pass
+    
+    def A(self, samples):
+        #Controls loudness
+        A = N.empty(samples, N.float)
+
+        top = int(samples * .05)
+
+        A[:top] = N.linspace(0, 1, top)
+        A[top:] = N.linspace(1, 0, samples-top)
+        return A
+        
+    def I(self, samples):
+        #controls timbre
+
+        return self._create_envelope(samples, [{'type':'line', 'length':'100%', 'start_value':6, 'stop_value':0}])
+
+class Brass(Instrument):
+    def A(self, samples):
+        return self._create_envelope(samples, [
+                {'type':'line', 'length':'5%', 'start_value':0, 'stop_value':1},
+                {'type':'line', 'length':'10%', 'start_value':1, 'stop_value':.9},
+                {'type':'line', 'length':'80%', 'start_value':.9, 'stop_value':.8},
+                {'type':'line', 'length':'5%', 'start_value':.8, 'stop_value':0},
+                ])
+
+    def fm(self, fc):
+        return fc
+
+    def I(self, samples):
+        return self._create_envelope(samples, [
+                {'type':'line', 'length':'5%', 'start_value':0, 'stop_value':2},
+                {'type':'line', 'length':'10%', 'start_value':2, 'stop_value':1.9},
+                {'type':'line', 'length':'80%', 'start_value':1.9, 'stop_value':1.8},
+                {'type':'line', 'length':'5%', 'start_value':1.8, 'stop_value':0},
+                ])
+
+class Bell(Instrument):
+    def A(self, samples):
+        pass
+
+    def fm(self, fc):
+        return fc * 1.618 #golden ratio
+
+    def I(self, samples):
+        pass
+    
+    
 if __name__ == "__main__":
     music = PyProgMusic()
 
-    thetone = Tone()
+    i = Brass()
+
 
     #http://www.music-scores.com/midi.php?sheetmusic=Xmas_Jingle_Bells_very_easy_piano
     
-    music.add_note(thetone, "E 4", 1)
-    music.add_note(thetone, "E 4", 1)
-    music.add_note(thetone, "E 4", 2)
+    music.add_note(i, "E 4", 1)
+    music.add_note(i, "E 4", 1)
+    music.add_note(i, "E 4", 2)
 
-    music.add_note(thetone, "E 4", 1)
-    music.add_note(thetone, "E 4", 1)
-    music.add_note(thetone, "E 4", 2)
+    music.add_note(i, "E 4", 1)
+    music.add_note(i, "E 4", 1)
+    music.add_note(i, "E 4", 2)
     
-    music.add_note(thetone, "E 4", 1)
-    music.add_note(thetone, "G 4", 1)
-    music.add_note(thetone, "C 4", 1.5)
-    music.add_note(thetone, "D 4", .5)
+    music.add_note(i, "E 4", 1)
+    music.add_note(i, "G 4", 1)
+    music.add_note(i, "C 4", 1.5)
+    music.add_note(i, "D 4", .5)
 
-    music.add_note(thetone, "E 4", 4)
+    music.add_note(i, "E 4", 4)
 
 
-    music.add_note(thetone, "F 4", 1)
-    music.add_note(thetone, "F 4", 1)
-    music.add_note(thetone, "F 4", 1.5)
-    music.add_note(thetone, "F 4", .5)
+    music.add_note(i, "F 4", 1)
+    music.add_note(i, "F 4", 1)
+    music.add_note(i, "F 4", 1.5)
+    music.add_note(i, "F 4", .5)
 
-    music.add_note(thetone, "F 4", 1)
-    music.add_note(thetone, "E 4", 1)
-    music.add_note(thetone, "E 4", 1)
-    music.add_note(thetone, "E 4", .5)
-    music.add_note(thetone, "E 4", .5)
+    music.add_note(i, "F 4", 1)
+    music.add_note(i, "E 4", 1)
+    music.add_note(i, "E 4", 1)
+    music.add_note(i, "E 4", .5)
+    music.add_note(i, "E 4", .5)
 
-    music.add_note(thetone, "E 4", 1)
-    music.add_note(thetone, "D 4", 1)
-    music.add_note(thetone, "D 4", 1)
-    music.add_note(thetone, "E 4", 1)
+    music.add_note(i, "E 4", 1)
+    music.add_note(i, "D 4", 1)
+    music.add_note(i, "D 4", 1)
+    music.add_note(i, "E 4", 1)
 
-    music.add_note(thetone, "D 4", 2)
-    music.add_note(thetone, "G 4", 2)
+    music.add_note(i, "D 4", 2)
+    music.add_note(i, "G 4", 2)
 
-    music.add_note(thetone, "E 4", 1)
-    music.add_note(thetone, "E 4", 1)
-    music.add_note(thetone, "E 4", 2)
+    music.add_note(i, "E 4", 1)
+    music.add_note(i, "E 4", 1)
+    music.add_note(i, "E 4", 2)
 
-    music.add_note(thetone, "E 4", 1)
-    music.add_note(thetone, "E 4", 1)
-    music.add_note(thetone, "E 4", 2)
+    music.add_note(i, "E 4", 1)
+    music.add_note(i, "E 4", 1)
+    music.add_note(i, "E 4", 2)
 
-    music.add_note(thetone, "E 4", 1)
-    music.add_note(thetone, "G 4", 1)
-    music.add_note(thetone, "C 4", 1.5)
-    music.add_note(thetone, "D 4", .5)
+    music.add_note(i, "E 4", 1)
+    music.add_note(i, "G 4", 1)
+    music.add_note(i, "C 4", 1.5)
+    music.add_note(i, "D 4", .5)
 
-    music.add_note(thetone, "E 4", 4)
+    music.add_note(i, "E 4", 4)
 
-    music.add_note(thetone, "F 4", 1)
-    music.add_note(thetone, "F 4", 1)
-    music.add_note(thetone, "F 4", 1)
-    music.add_note(thetone, "F 4", 1)
+    music.add_note(i, "F 4", 1)
+    music.add_note(i, "F 4", 1)
+    music.add_note(i, "F 4", 1)
+    music.add_note(i, "F 4", 1)
 
-    music.add_note(thetone, "F 4", 1)
-    music.add_note(thetone, "E 4", 1)
-    music.add_note(thetone, "E 4", 1)
-    music.add_note(thetone, "E 4", .5)
-    music.add_note(thetone, "E 4", .5)
+    music.add_note(i, "F 4", 1)
+    music.add_note(i, "E 4", 1)
+    music.add_note(i, "E 4", 1)
+    music.add_note(i, "E 4", .5)
+    music.add_note(i, "E 4", .5)
 
-    music.add_note(thetone, "G 4", 1)
-    music.add_note(thetone, "G 4", 1)
-    music.add_note(thetone, "F 4", 1)
-    music.add_note(thetone, "D 4", 1)
+    music.add_note(i, "G 4", 1)
+    music.add_note(i, "G 4", 1)
+    music.add_note(i, "F 4", 1)
+    music.add_note(i, "D 4", 1)
 
-    music.add_note(thetone, "C 4", 4)
+    music.add_note(i, "C 4", 4)
 
     music.play()
