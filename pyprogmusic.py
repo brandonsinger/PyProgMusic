@@ -344,6 +344,8 @@ class Instrument(object):
             if action['type'] == 'line':
                 e[position:position+l] = N.linspace(action['start_value'], action['stop_value'], l)
                 #print "line %s:%s start:%s stop:%s" % (position, position+l, action['start_value'], action['stop_value'])
+            elif action['type'] == 'exp':
+                e[position:position+l] = action['base'] ** N.arange(l, dtype=N.float)
 
 
             position += l
@@ -380,10 +382,12 @@ class Bla(Instrument):
         A[:top] = N.linspace(0, 1, top)
         A[top:] = N.linspace(1, 0, samples-top)
         return A
+
+    def fm(self, fc):
+        return fc
         
     def I(self, samples):
         #controls timbre
-
         return self._create_envelope(samples, [{'type':'line', 'length':'100%', 'start_value':6, 'stop_value':0}])
 
 class Brass(Instrument):
@@ -408,19 +412,23 @@ class Brass(Instrument):
 
 class Bell(Instrument):
     def A(self, samples):
-        pass
+        return self._create_envelope(samples, [
+                {'type':'exp', 'length':'100%', 'base':.5}
+                ])
 
     def fm(self, fc):
         return fc * 1.618 #golden ratio
 
     def I(self, samples):
-        pass
+        return self._create_envelope(samples, [
+                {'type':'exp', 'length':'100%', 'base':.5}
+                ])
     
     
 if __name__ == "__main__":
     music = PyProgMusic()
 
-    i = Brass()
+    i = Bell()
 
 
     #http://www.music-scores.com/midi.php?sheetmusic=Xmas_Jingle_Bells_very_easy_piano
@@ -429,7 +437,7 @@ if __name__ == "__main__":
     music.add_note(i, "E 4", 1)
     music.add_note(i, "E 4", 2)
 
-    music.add_note(i, "E 4", 1)
+    """music.add_note(i, "E 4", 1)
     music.add_note(i, "E 4", 1)
     music.add_note(i, "E 4", 2)
     
@@ -491,6 +499,6 @@ if __name__ == "__main__":
     music.add_note(i, "F 4", 1)
     music.add_note(i, "D 4", 1)
 
-    music.add_note(i, "C 4", 4)
+    music.add_note(i, "C 4", 4)"""
 
     music.play()
