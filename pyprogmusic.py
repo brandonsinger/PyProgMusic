@@ -345,7 +345,8 @@ class Instrument(object):
                 e[position:position+l] = N.linspace(action['start_value'], action['stop_value'], l)
                 #print "line %s:%s start:%s stop:%s" % (position, position+l, action['start_value'], action['stop_value'])
             elif action['type'] == 'exp':
-                e[position:position+l] = action['base'] ** N.arange(l, dtype=N.float)
+                print "Base: %s" % (action['base'],)
+                e[position:position+l] = action['base'] ** (N.arange(l, dtype=N.float)-action['pos'])
 
 
             position += l
@@ -413,7 +414,7 @@ class Brass(Instrument):
 class Bell(Instrument):
     def A(self, samples):
         return self._create_envelope(samples, [
-                {'type':'exp', 'length':'100%', 'base':.5}
+                {'type':'exp', 'length':'100%', 'base':.99999, 'pos':0}
                 ])
 
     def fm(self, fc):
@@ -421,7 +422,7 @@ class Bell(Instrument):
 
     def I(self, samples):
         return self._create_envelope(samples, [
-                {'type':'exp', 'length':'100%', 'base':.5}
+                {'type':'exp', 'length':'100%', 'base':.9999, 'pos':50}
                 ])
     
     
@@ -430,14 +431,15 @@ if __name__ == "__main__":
 
     i = Bell()
 
-
+    
     #http://www.music-scores.com/midi.php?sheetmusic=Xmas_Jingle_Bells_very_easy_piano
     
     music.add_note(i, "E 4", 1)
     music.add_note(i, "E 4", 1)
     music.add_note(i, "E 4", 2)
 
-    """music.add_note(i, "E 4", 1)
+    """
+    music.add_note(i, "E 4", 1)
     music.add_note(i, "E 4", 1)
     music.add_note(i, "E 4", 2)
     
