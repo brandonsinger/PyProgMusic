@@ -31,10 +31,15 @@
 #Tom 2: 128Hz
 #Top 1: 150Hz
 
+#combining: One should fourier-transform both channels, sum two spectra, then transform the result back to time domain
+#data = np.fft.rfft(data)
+# #MANipulation
+#data = np.fft.irfft(data)
+
 
 import numpy as N
 import wave
-
+import struct
 
 
 
@@ -264,26 +269,28 @@ class PyProgMusic(object):
        
         self.channel_data.append(signal)
 
+    def _generate_data(self):
+        signal = N.concatenate(self.channel_data, axis=0).astype(N.int16)
+        ssignal = b''.join((struct.pack('h', item) for item in signal)) # transform to binary
+        return ssignal
+
     def write_out(self):
-        signal = N.concatenate(self.channel_data, axis=0)
-        ssignal = ''.join((wave.struct.pack('h', item) for item in signal)) # transform to binary
+        data = self._generate_data()
        
         file = wave.open('test.wav', 'wb')
         file.setparams((1, 2, self.sample_rate, 44100*4, 'NONE', 'noncompressed'))       
-        file.writeframes(ssignal)
+        file.writeframes(data)
         file.close()
 
     def play(self):
-        self.write_out()
-        print "Playing music"
+        print("Playing music")
 
-        import pyglet
-        music = pyglet.resource.media("test.wav")
-        player = pyglet.media.Player()
-        player.queue(music)
-        player.play()
-        while player.playing:
-            pyglet.clock.tick(30)
+        data = self._generate_data()
+
+        import pyaudio
+        p = pyaudio.PyAudio()
+        stream = p.open(format=pyaudio.paInt16, channels=1, rate=self.sample_rate, output=True)
+        stream.write(data)
 
 
     def view(self):
@@ -331,7 +338,7 @@ class Instrument(object):
         #types: line, exponential, logorithmic
         # ?: [type:?, length:(in amount or percent), start_value, stop_value]
 
-        e = N.empty(samples, N.float)        
+        e = N.empty(samples, N.float)
         position = 0
 
         for action in actions:
@@ -345,7 +352,7 @@ class Instrument(object):
                 e[position:position+l] = N.linspace(action['start_value'], action['stop_value'], l)
                 #print "line %s:%s start:%s stop:%s" % (position, position+l, action['start_value'], action['stop_value'])
             elif action['type'] == 'exp':
-                print "Base: %s" % (action['base'],)
+                print("Base: %s" % (action['base'],))
                 e[position:position+l] = action['base'] ** (N.arange(l, dtype=N.float)-action['pos'])
 
 
